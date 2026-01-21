@@ -1,15 +1,4 @@
 <!DOCTYPE html>
-<html lang="en">
-
-  <head>
-    <meta charset="UTF-8">
-    <title>Dünya Stadyum Mimarisi Atlası</title>
-    
-
-  </head>
-    
-  <body>
-  <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8" />
@@ -24,7 +13,7 @@
             --stadium-dark: #2c3e50;
         }
         
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Inter', sans-serif; background: var(--concrete-grey); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Inter', sans-serif; background: var(--concrete-grey); overflow: visible !important; }
         
         .app-container { display: flex; flex-direction: column; height: 100vh; width: 100%; }
         @media (min-width: 768px) { .app-container { flex-direction: row; } }
@@ -77,6 +66,12 @@
             background: var(--stadium-dark); border: 3px solid var(--pitch-green); border-radius: 50% 50% 0 50%;
             transform: rotate(45deg); box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
+        .leaflet-control-zoom {
+      top: auto !important;
+      bottom: 10px !important;
+      right: 10px !important;
+      left: auto !important;
+      z-index: 10000 !important;
 
         .translation-info { font-size: 11px; color: #888; font-style: italic; margin-bottom: 5px; display: block; }
     </style>
@@ -317,8 +312,4 @@ const dataSet = [
 </script>
 
 </body>
-</html>
-    
-  </body>
-  
 </html>
