@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Dünya Stadyum Mimarisi Atlası</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dünya Stadyum Mimarisi Atlası</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { 
+            --pitch-green: #27ae60; 
+            --concrete-grey: #ecf0f1;
+            --floodlight: #f1c40f;
+            --stadium-dark: #2c3e50;
+        }
+        
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Inter', sans-serif; background: var(--concrete-grey); overflow: hidden; }
+        
+        .app-container { display: flex; flex-direction: column; height: 100vh; width: 100%; }
+        @media (min-width: 768px) { .app-container { flex-direction: row; } }
+
+        #map { flex: 1; width: 100%; z-index: 1; background: #b2bec3; }
+
+        #info-panel { 
+            background: white; display: flex; flex-direction: column; z-index: 1000; 
+            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+        }
+
+        @media (min-width: 768px) {
+            #info-panel { width: 420px; height: 100%; border-left: 3px solid var(--stadium-dark); }
+        }
+
+        @media (max-width: 767px) { #info-panel { height: 50vh; } }
+
+        .header { background: var(--stadium-dark); color: white; padding: 20px; text-align: center; border-bottom: 4px solid var(--pitch-green); }
+        .header h1 { margin: 0; font-size: 14px; letter-spacing: 1.5px;  font-weight: 800; }
+        
+        .search-area { padding: 15px; background: #fdfdfd; }
+        select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; color: var(--stadium-dark); }
+        
+        #content-area { padding: 25px; overflow-y: auto; flex: 1; }
+        #stadium-title { margin: 0; color: var(--stadium-dark); font-size: 24px; font-weight: 900; }
+        
+        .arch-badge { 
+            margin: 12px 0; display: inline-flex; align-items: center; 
+            background: #e8f5e9; color: #2e7d32; padding: 6px 14px; 
+            border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+        }
+
+        .details-box { font-size: 15px; color: #555; line-height: 1.7; margin-top: 15px; border-left: 3px solid var(--floodlight); padding-left: 15px; }
+
+        #stadium-img { 
+            width: 100%; border-radius: 12px; margin-top: 20px; 
+            display: none; object-fit: cover; max-height: 200px;
+        }
+
+        .btn { 
+            display: block; margin-top: 25px; padding: 15px; 
+            background: var(--stadium-dark); color: white; 
+            text-decoration: none; text-align: center; border-radius: 8px; font-weight: bold; transition: 0.3s;
+        }
+
+        .btn:hover { background: var(--pitch-green); }
+
+        .custom-marker {
+            width: 18px !important; height: 18px !important;
+            background: var(--stadium-dark); border: 3px solid var(--pitch-green); border-radius: 50% 50% 0 50%;
+            transform: rotate(45deg); box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .translation-info { font-size: 11px; color: #888; font-style: italic; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="map"></div>
+    <div id="info-panel">
+        <div class="header"><h1>Dünya Stadyum Mimarisi Atlası</h1></div>
+        <div class="search-area">
+            <select id="stadiumSelect"><option value="">Bir stadyum seçin...</option></select>
+        </div>
+        <div id="content-area">
+            <h2 id="stadium-title">Mühendislik Harikaları</h2>
+            <div id="style-box" style="display:none;" class="arch-badge">MİMARİ STİL: <span id="style-name" style="margin-left:5px;"></span></div>
+            <img id="stadium-img" src="">
+            <div id="stadium-text" class="details-box">Haritadaki noktalara tıklayarak antik tiyatrolardan geleceğin sürdürülebilir arenalarına kadar spor mimarisini keşfedin.</div>
+            <a id="wiki-link" href="#" target="_blank" class="btn" style="display:none;">MİMARİ DETAYLARI İNCELE</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const dataSet = [
+  // --- 1. ANTİK VE KLASİK DÖNEM ---
+  { name: "Olympia Stadyumu", lat: 37.6449, lng: 21.6295, wiki: "Stadium at Olympia", cat: "Antik", desc: "MÖ 8. yy. Olimpiyat oyunlarının doğum yeri; stadyum kavramının dünyadaki ilk örneği." },
+  { name: "Panathinaiko Stadyumu", lat: 37.9683, lng: 23.7411, wiki: "Panathenaic Stadium", cat: "Antik", desc: "Tamamen mermerden yapılmış tek stadyum; antik yapının üzerine 1896'da yeniden inşa edildi." },
+  { name: "Circus Maximus", lat: 41.8860, lng: 12.4853, wiki: "Circus_Maximus", cat: "Antik", desc: "150.000 kişilik kapasitesiyle tarihin en büyük hipodromu ve toplu eğlence alanı." },
+  { name: "Kolezyum", lat: 41.8902, lng: 12.4922, wiki: "Kolezyum", cat: "Antik", desc: "MS 80. Modern dikey oturma düzeni ve hızlı tahliye (vomitorium) sisteminin prototipi." },
+  { name: "Verona Arenası", lat: 45.4389, lng: 10.9944, wiki: "Verona_Arenası", cat: "Antik", desc: "Roma İmparatorluğu'ndan günümüze kalan ve hala opera için kullanılan en sağlam arenalardan biri." },
+  { name: "Nîmes Arenası", lat: 43.8349, lng: 4.3597, wiki: "Nîmes_Arenası", cat: "Antik", desc: "Fransa'da bulunan, Roma dışındaki en iyi korunmuş 2-katlı dış cepheye sahip antik yapı." },
+  { name: "Pula Arenası", lat: 44.8732, lng: 13.8502, wiki: "Pula Arena", cat: "Antik", desc: "Hırvatistan'da bulunan, dört ana kulesi ve tüm Roma mimari elemanları korunan nadir eser." },
+  { name: "Aphrodisias Stadyumu", lat: 37.7132, lng: 28.7237, wiki: "Aphrodisias", cat: "Antik", desc: "Türkiye'deki en iyi korunmuş antik stadyum; 30.000 kapasiteli tam bir mühendislik harikası." },
+
+  // --- 2. MODERN FUTBOLUN DOĞUŞU (1850 - 1930) ---
+  { name: "Bramall Lane", lat: 53.3703, lng: -1.4708, wiki: "Bramall_Lane", cat: "Klasik", desc: "Dünyanın en eski profesyonel futbol stadyumu (1855); Sheffield futbol mirasının evi." },
+  { name: "Goodison Park", lat: 53.4389, lng: -2.9664, wiki: "Goodison_Park", cat: "Klasik", desc: "Dünyanın ilk 'dört taraflı' komple stadyum yapısı; İngiliz stadyum mimarisinin öncüsü." },
+  { name: "Old Trafford", lat: 53.4631, lng: -2.2913, wiki: "Old_Trafford", cat: "Klasik", desc: "Archibald Leitch tasarımı 'Düşler Tiyatrosu'; geleneksel İngiliz çelik kafes yapısı." },
+  { name: "Hampden Park", lat: 55.8258, lng: -4.2520, wiki: "Hampden_Park", cat: "Klasik", desc: "Bir dönem 150.000 kişiyi ağırlayarak dünyanın en büyük kapasiteli stadyumu rekorunu kırmıştır." },
+  { name: "İnönü Stadyumu (Eski)", lat: 41.0394, lng: 28.9944, wiki: "BJK_İnönü_Stadyumu", cat: "Klasik", desc: "Deniz manzarasına açılan tek stadyum; saray mimarisiyle entegre eşsiz konumlandırma." },
+  { name: "Highbury", lat: 51.5577, lng: -0.1028, wiki: "Highbury_Stadyumu", cat: "Klasik", desc: "Art Deco tarzı cephesiyle bilinen, futbolun zarafetle buluştuğu 'kütüphane' lakaplı stat." },
+  { name: "Ibrox Stadyumu", lat: 55.8532, lng: -4.3093, wiki: "Ibrox_Stadyumu", cat: "Klasik", desc: "Kırmızı tuğla cephesiyle ikonikleşen, Leitch mühendisliğinin en görkemli İskoç örneği." },
+  { name: "Anfield", lat: 53.4308, lng: -2.9608, wiki: "Anfield", cat: "Klasik", desc: "Meşhur 'Kop' tribünü ile taraftar baskısını mimari bir akustik güce dönüştüren yapı." },
+  { name: "White City Stadium", lat: 51.5126, lng: -0.2269, wiki: "White_City_Stadyumu", cat: "Klasik", desc: "1908 Londra Olimpiyatları için inşa edilen dünyanın ilk çok amaçlı modern spor kompleksi." },
+
+  // --- 3. DEV KASELER VE ULUSAL SİMGELER (1930 - 1970) ---
+  { name: "Maracanã", lat: -22.9121, lng: -43.2302, wiki: "Maracanã_Stadyumu", cat: "Klasik", desc: "Brezilya'nın futbol tapınağı; 200.000 kişiyi sığdıran devasa dairesel kase formu." },
+  { name: "Estadio Azteca", lat: 19.3029, lng: -99.1505, wiki: "Aztek_Stadyumu", cat: "Klasik", desc: "2200 metre rakımda, akustiği içeri hapseden devasa dikey yapısıyla rakipler için kabus." },
+  { name: "Santiago Bernabéu", lat: 40.4531, lng: -3.6883, wiki: "Santiago_Bernabéu_Stadyumu", cat: "Klasik", desc: "Şehrin merkezinde yükselen, dikey genişlemesiyle baskın bir kentsel simge haline gelen yapı." },
+  { name: "Camp Nou", lat: 41.3809, lng: 2.1228, wiki: "Camp_Nou", cat: "Klasik", desc: "Avrupa'nın en büyük kapasiteli stadyumu; katalan kimliğinin mimari yansıması." },
+  { name: "San Siro", lat: 45.4781, lng: 9.1240, wiki: "San_Siro", cat: "Klasik", desc: "Brütalist kuleleri ve sarmal rampalarıyla 'futbolun kalesi' olarak anılan İtalyan şaheseri." },
+  { name: "Luzhniki Stadyumu", lat: 55.7158, lng: 37.5536, wiki: "Lujniki_Stadyumu", cat: "Klasik", desc: "Sovyet döneminin anıtsal ölçekli, geniş ve görkemli spor kompleksi tasarımı." },
+  { name: "Estadio Centenario", lat: -34.8944, lng: -56.1528, wiki: "Estadio_Centenario", cat: "Klasik", desc: "1930'da ilk Dünya Kupası için 9 ayda inşa edilen betonarme hız mucizesi." },
+  { name: "Berlin Olimpiyat Stadı", lat: 52.5147, lng: 13.2394, wiki: "Berlin_Olimpiyat_Stadyumu", cat: "Klasik", desc: "Anıtsal taş kaplamaları ve tarihin yükünü taşıyan heybetli neo-klasik mimari." },
+  { name: "Rose Bowl", lat: 34.1613, lng: -118.1676, wiki: "Rose_Bowl_(stadyum)", cat: "Klasik", desc: "Amerikan açık hava stadyum kültürünün en klasik ve en geniş kase örneği." },
+  { name: "La Bombonera", lat: -34.6356, lng: -58.3646, wiki: "La_Bombonera", cat: "Klasik", desc: "D-formu yapısı sayesinde taraftarın zemine en yakın olduğu ve 'titrediği' efsanevi yapı." },
+  { name: "Monumental", lat: -34.5453, lng: -58.4497, wiki: "River_Plate_Stadyumu", cat: "Klasik", desc: "Arjantin'in ulusal stadyumu; dairesel formuyla kıtanın en ikonik arenalarından biri." },
+  { name: "Mestalla", lat: 39.4746, lng: -0.3582, wiki: "Mestalla_Stadyumu", cat: "Klasik", desc: "Dünyanın en dik tribünlerinden birine sahip, seyircinin sahaya tepeden baktığı dikey yapı." },
+  { name: "Cotton Bowl", lat: 32.7797, lng: -96.7594, wiki: "Cotton Bowl (stadium)", cat: "Klasik", desc: "Teksas'ın devasa beton yığını; Amerikan futbolu tarihinin açık hava simgesi." },
+  { name: "Melbourne Cricket Ground", lat: -37.8199, lng: 144.9834, wiki: "Melbourne Cricket Ground", cat: "Klasik", desc: "Güney yarımkürenin en büyük, dünyanın 10. büyük stadyumu; kriket mimarisinin zirvesi." },
+  { name: "Estádio da Luz", lat: 38.7525, lng: -9.1847, wiki: "Işık_Stadyumu", cat: "Modern", desc: "Polikarbonat çatısı sayesinde içeriye maksimum doğal ışık alan 'Işık Stadı'." },
+
+  // --- 4. MÜHENDİSLİK VE TASARIMDA DEVRİM (1970 - 2000) ---
+  { name: "Azadi Stadyumu", lat: 35.7245, lng: 51.2753, wiki: "Azadi_Stadyumu", cat: "Klasik", desc: "Toprak kazılarak dev bir çukur içine yerleştirilen, dışarıdan görünmeyen devasa İran kasesi." },
+  { name: "Salt Lake Stadium", lat: 22.5689, lng: 88.4086, wiki: "Tuz Gölü Stadyumu", cat: "Klasik", desc: "Hindistan'ın devasa üç katlı yapısı; Asya futbolunun en kalabalık buluşma noktası." },
+  { name: "Giuseppe Meazza", lat: 45.4781, lng: 9.1240, wiki: "San_Siro", cat: "Klasik", desc: "1990 genişletmesiyle eklenen dev silindirik kuleler ve asma çatı yapısı." },
+  { name: "Hong Kong Stadyumu", lat: 22.2736, lng: 114.1881, wiki: "Hong_Kong_Stadyumu", cat: "Klasik", desc: "Vadi içine kusursuzca yerleştirilmiş, doğayla bütünleşik topoğrafik mimari örneği." },
+  { name: "Münih Olimpiyat Stadı", lat: 48.1731, lng: 11.5466, wiki: "Münih_Olimpiyat_Stadyumu", cat: "Modern", desc: "Behnisch tasarımı akrilik camdan 'çadır' çatısı ile modern mimaride devrim yaratan yapı." },
+  { name: "Superdome", lat: 29.9511, lng: -90.0812, wiki: "Caesars_Superdome", cat: "Modern", desc: "Dünyanın en büyük çelik kubbe yapısı; devasa iç hacmiyle mühendislik sınırı." },
+  { name: "Montreal Olimpiyat Stadı", lat: 45.5581, lng: -73.5519, wiki: "Montreal_Olimpiyat_Stadyumu", cat: "Modern", desc: "Dünyanın en yüksek eğik kulesine (175m) sahip, fütüristik ve tartışmalı tasarım." },
+  { name: "Stade de France", lat: 48.9244, lng: 2.3602, wiki: "Stade_de_France", cat: "Modern", desc: "Yüzer tavan yapısı ve alt tribünlerin raylar üzerinde kayarak atletizm pistini kapatması." },
+  { name: "Millennium Stadium", lat: 51.4782, lng: -3.1826, wiki: "Millennium_Stadyumu", cat: "Modern", desc: "Şehir merkezinde bulunan, tamamen kapanabilir çatılı ilk büyük stadyum tasarımı." },
+  { name: "GelreDome", lat: 51.9631, lng: 5.8931, wiki: "GelreDome", cat: "Modern", desc: "Kayar saha ve kapanır tavanı birleştiren dünyanın ilk çok amaçlı lojistik arenalarından biri." },
+  { name: "Amsterdam Arena", lat: 52.3142, lng: 4.9427, wiki: "Johan_Cruyff_Arena", cat: "Modern", desc: "Avrupa'nın ilk açılır-kapanır tavanlı stadı; modern eğlence arenalarının öncüsü." },
+  { name: "King Fahd Stadium", lat: 24.7884, lng: 46.8390, wiki: "Kral_Fehd_Stadyumu", cat: "Modern", desc: "Çöl çadırı formundaki devasa teflon membran çatısı ile dünyanın en büyük membran alanı." },
+  { name: "Stadium Australia", lat: -33.8472, lng: 151.0634, wiki: "Stadium Australia", cat: "Modern", desc: "2000 Olimpiyatları için tasarlanan sürdürülebilir enerji ve havalandırma sistemleri öncüsü." },
+  { name: "SkyDome", lat: 43.6414, lng: -79.3894, wiki: "Rogers_Centre", cat: "Modern", desc: "Tamamen açılan sert tavan sistemini başarıyla uygulayan ilk beyzbol/futbol kompleksi." },
+  { name: "Georgia Dome", lat: 33.7577, lng: -84.4017, wiki: "Georgia_Dome", cat: "Modern", desc: "Kablo gergi (tensegrity) sistemiyle inşa edilmiş dünyanın en geniş teflon kubbesiydi." },
+
+  // --- 5. FÜTÜRİZM VE 21. YÜZYIL (2000 - 2015) ---
+  { name: "Allianz Arena", lat: 48.2188, lng: 11.6247, wiki: "Allianz_Arena", cat: "Modern", desc: "Dış cephesi tamamen ışıklı ETFE balonlardan oluşan ilk 'bukalemun' stadyum." },
+  { name: "Pekin Ulusal Stadı", lat: 39.9930, lng: 116.3962, wiki: "Pekin_Ulusal_Stadyumu", cat: "Modern", desc: "Herzog & de Meuron tasarımı 'Kuş Yuvası'; dünyanın en büyük çelik yapılarından biri." },
+  { name: "Wembley (Yeni)", lat: 51.5560, lng: -0.2796, wiki: "Wembley_Stadyumu", cat: "Modern", desc: "133 metre yüksekliğindeki dev kemeriyle çatıyı taşıyan Londra'nın modern silueti." },
+  { name: "Donbass Arena", lat: 48.0211, lng: 37.8100, wiki: "Donbass_Arena", cat: "Modern", desc: "Işıklandırılmış elmas formu ve eğimli tavan yapısı ile Doğu Avrupa'nın teknoloji harikası." },
+  { name: "Juventus Stadium", lat: 45.1095, lng: 7.6413, wiki: "Juventus_Stadyumu", cat: "Modern", desc: "İtalya'da taraftarı sahaya yaklaştıran butik ve modern stadyum devriminin temsilcisi." },
+  { name: "FNB Stadyumu", lat: -26.2347, lng: 27.9824, wiki: "FNB Stadium", cat: "Modern", desc: "Afrika geleneksel çömlek (Calabash) formundan esinlenilen mozaik dış cephe." },
+  { name: "National Stadium (Kaohsiung)", lat: 22.7018, lng: 120.2947, wiki: "National Stadium (Kaohsiung)", cat: "Modern", desc: "Güneş enerjisi üreten devasa spiral 'yılan' formu; Toyo Ito'nun ekolojik şaheseri." },
+  { name: "AT&T Stadium", lat: 32.7473, lng: -97.0928, wiki: "AT&T_Stadyumu", cat: "Modern", desc: "Dev asılı skorbordu ve sütunsuz devasa iç hacmiyle Teksas'ın 'spor sarayı'." },
+  { name: "Cape Town Stadium", lat: -33.9036, lng: 18.4111, wiki: "Cape_Town_Stadyumu", cat: "Modern", desc: "Masa Dağı manzarasına uyum sağlayan, ışık geçiren membran dış cephe mimarisi." },
+  { name: "Arena da Amazônia", lat: -3.0842, lng: -60.0265, wiki: "Arena_da_Amazônia", cat: "Modern", desc: "Yerel Amazon sepet örgülerinden ilham alan metalik dış iskelet yapısı." },
+  { name: "National Stadium (Varşova)", lat: 52.2394, lng: 21.0458, wiki: "Varşova_Ulusal_Stadyumu", cat: "Modern", desc: "Merkezi asma çatı sistemi ve hasır sepet formundaki dış cephe aydınlatması." },
+  { name: "Aviva Stadium", lat: 53.3352, lng: -6.2285, wiki: "Aviva_Stadyumu", cat: "Modern", desc: "Komşu binaların ışığını kesmemek için kuzey tribünü alçalan akışkan şeffaf yapı." },
+  { name: "Singapur Ulusal Stadı", lat: 1.3039, lng: 103.8750, wiki: "National Stadium, Singapore", cat: "Modern", desc: "Dünyanın en büyük kubbe yapısı ve tropik iklime göre tasarlanmış açılır çatısı." },
+  { name: "Estádio do Dragão", lat: 41.1617, lng: -8.5836, wiki: "Ejder_Stadyumu", cat: "Modern", desc: "Şeffaf çatısı ve çevre dostu havalandırma sistemleriyle Portekiz'in modern ikonu." },
+  { name: "Veltins-Arena", lat: 51.5546, lng: 7.0675, wiki: "Veltins-Arena", cat: "Modern", desc: "Çıkarılabilir sahası, kapanır tavanı ve dev video küpüyle Avrupa'nın çok amaçlı devi." },
+
+  // --- 6. SÜRDÜRÜLEBİLİRLİK VE AKILLI STATLAR (2015 - GÜNÜMÜZ) ---
+  { name: "Tottenham Hotspur Stadium", lat: 51.6042, lng: -0.0659, wiki: "Tottenham_Hotspur_Stadyumu", cat: "Modern", desc: "Bölünebilir ve geri çekilebilir saha teknolojisinin dünyadaki en ileri örneği." },
+  { name: "Stadium 974", lat: 25.2850, lng: 51.5640, wiki: "Stadium 974", cat: "Modern", desc: "974 nakliye konteynerinden inşa edilen dünyanın ilk sökülebilir ve geri dönüştürülebilir stadı." },
+  { name: "Mercedes-Benz Stadium", lat: 33.7553, lng: -84.4008, wiki: "Mercedes-Benz_Stadium", cat: "Modern", desc: "İkonik dairesel diyafram çatısı ile Amerikan spor mimarisinin teknolojik zirvesi." },
+  { name: "Lusail Stadium", lat: 25.4208, lng: 51.4886, wiki: "Lusail Stadium", cat: "Modern", desc: "İslam sanatındaki kase formundan ilham alan, altın rengi ve akıllı iklimlendirmeli yapı." },
+  { name: "Wanda Metropolitano", lat: 40.4362, lng: -3.5995, wiki: "Metropolitano_Stadyumu", cat: "Modern", desc: "Eski beton yapının modern bir asma tavan ve cepheyle bütünleştiği Madrid'in yeni yüzü." },
+  { name: "Al Janoub Stadium", lat: 25.1600, lng: 51.5744, wiki: "Al Janoub Stadium", cat: "Modern", desc: "Zaha Hadid tasarımı; geleneksel Dhow teknelerinin rüzgarla dolan yelken formundan esinlendi." },
+  { name: "SoFi Stadium", lat: 33.9535, lng: -118.3392, wiki: "SoFi_Stadyumu", cat: "Modern", desc: "Yerin altına gömülü yapısı ve devasa şeffaf tavan örtüsüyle dünyanın en pahalı spor tesislerinen biri." },
+  { name: "Allegiant Stadium", lat: 36.0908, lng: -115.1837, wiki: "Allegiant_Stadyumu", cat: "Modern", desc: "Las Vegas'ta bulunan, tamamen siyah cam cepheli 'Death Star' lakaplı teknoloji merkezi." },
+  { name: "Matmut Atlantique", lat: 44.8972, lng: -0.5614, wiki: "Matmut_Atlantique", cat: "Modern", desc: "600 ince beyaz kolonun taşıdığı hafif ve zarif yapı; stadyum mimarisinde minimalizm." },
+  { name: "Levi's Stadium", lat: 37.4033, lng: -121.9694, wiki: "Levi's_Stadyumu", cat: "Modern", desc: "Güneş panelli terasları ve yeşil çatısı ile sürdürülebilirlik ödüllü ilk büyük Amerikan stadı." },
+  { name: "Arena Pantanal", lat: -15.6041, lng: -56.1211, wiki: "Arena_Pantanal", cat: "Modern", desc: "Modüler köşeleri sayesinde maç kapasitesi turnuva sonrası küçülebilen çevre dostu yapı." },
+  { name: "Groupama Stadium", lat: 45.7653, lng: 4.9820, wiki: "Parc_Olympique_Lyonnais", cat: "Modern", desc: "Çatısı bir koruma örtüsü gibi dışarıya taşarak çevredeki kamusal alanı da kapsayan tasarım." },
+  { name: "Stade Vélodrome (Yeni)", lat: 43.2699, lng: 5.3959, wiki: "Vélodrome_Stadyumu", cat: "Modern", desc: "Devasa dalga formundaki beyaz membran çatısı ile Akdeniz'in ikonik spor yapısı." },
+  { name: "Optus Stadium", lat: -31.9511, lng: 115.8891, wiki: "Perth_Stadyumu", cat: "Modern", desc: "Işıklandırma tasarımı ve kullanıcı deneyimi odaklı mimarisiyle ödüllü Avustralya arenaları." },
+  { name: "Puskás Aréna", lat: 47.5028, lng: 19.0967, wiki: "Puskás_Aréna", cat: "Modern", desc: "Eski stadyumun tarihi kolonlarını modern bir yapının içine entegre eden saygı duruşu tasarımı." },
+
+  // --- 7. KÜLTÜREL ATMOSFER VE DETAYLAR ---
+  { name: "Signal Iduna Park", lat: 51.4926, lng: 7.4518, wiki: "Signal_Iduna_Park", cat: "Klasik", desc: "Meşhur 'Sarı Duvar' tribünü; akustik mühendisliğinin taraftar gücüyle birleşimi." },
+  { name: "Municipal de Braga", lat: 41.5616, lng: -8.4296, wiki: "Estádio_Municipal_de_Braga", cat: "Özel", desc: "Kaya ocağının içine oyulmuş, iki kalesi kaya kütlesi olan ödüllü tasarım." },
+  { name: "Stadion Voždovac", lat: 44.7745, lng: 20.4901, wiki: "Voždovac_Stadyumu", cat: "Özel", desc: "Bir alışveriş merkezinin çatısına inşa edilmiş, kentsel alan kullanımının en uç örneği." },
+  { name: "Floating Stadium", lat: 1.2885, lng: 103.8597, wiki: "Marina_Bay_Floating_Platform", cat: "Özel", desc: "Tamamen çelik platform üzerine kurulu, denizin ortasında yüzen tek stadyum sahası." },
+  { name: "Akyazı Stadyumu", lat: 41.0017, lng: 39.6455, wiki: "Şenol_Güneş_Spor_Kompleksi", cat: "Modern", desc: "Deniz dolgusu üzerine inşa edilen, Türkiye'nin en büyük dolgu alanı spor projesi." },
+  { name: "Estadio BBVA", lat: 25.6691, lng: -100.2439, wiki: "BBVA_Stadyumu", cat: "Modern", desc: "Dağ manzarasına bakan 'Çelik At nalı' formuyla doğa ve endüstriyel tasarım uyumu." },
+  { name: "Şükrü Saracoğlu", lat: 40.9877, lng: 29.0370, wiki: "Şükrü_Saracoğlu_Stadyumu", cat: "Klasik", desc: "Şehir dokusuyla iç içe, dikey tribünleriyle klasik İngiliz stadyum atmosferine sahip yapı." },
+  { name: "Vodafone Park", lat: 41.0394, lng: 28.9944, wiki: "Vodafone_Park", cat: "Modern", desc: "Boğaz siluetini bozmadan yer altına gömülen, kolonsuz görüş açılı modern arena." },
+  { name: "Timsah Arena", lat: 40.1915, lng: 29.0135, wiki: "Bursa_Büyükşehir_Belediye_Stadyumu", cat: "Modern", desc: "Dünyanın hayvan figürlü (Timsah) dış cephe mimarisine sahip en özgün stadyum yapılarından biri." },
+  { name: "Henningsvær Stadı", lat: 68.1480, lng: 14.2016, wiki: "Henningsvær", cat: "Özel", desc: "Kayalık adaların ortasında, dünyanın en estetik ve fotojenik amatör futbol sahası." },
+  { name: "Ottmar Hitzfeld Stadı", lat: 46.2167, lng: 7.8500, wiki: "Ottmar_Hitzfeld_Stadium", cat: "Özel", desc: "Avrupa'nın en yüksek rakımlı sahası; Alplerin zirvesinde helikopterle ulaşılan futbol alanı." },
+  { name: "Ipurua Stadyumu", lat: 43.1818, lng: -2.4754, wiki: "Ipurua Municipal Stadium", cat: "Özel", desc: "Apartmanların arasına sıkışmış, balkondan maç izlenen dikey kentsel stadyum modeli." },
+  { name: "Craven Cottage", lat: 51.4750, lng: -0.2217, wiki: "Craven_Cottage", cat: "Klasik", desc: "19. yüzyıl mimari pavilyonunu koruyan, Thames nehri kıyısındaki tarihi İngiliz mirası." },
+  { name: "Stadion Kantrida", lat: 45.3353, lng: 14.3822, wiki: "Stadion Kantrida", cat: "Özel", desc: "Bir yanda Adriyatik denizi, diğer yanda dik kayalıklar arasına kurulmuş doğal tribün." },
+  { name: "Estádio da Luz (Yeni)", lat: 38.7525, lng: -9.1847, wiki: "Işık_Stadyumu", cat: "Modern", desc: "Güneş ışığını sahanın ortasına odaklayan polikarbonat şeffaf çatı mühendisliği." },
+  { name: "Gospin Dolac", lat: 43.4503, lng: 17.2119, wiki: "Stadion Gospin dolac", cat: "Özel", desc: "Derin bir düden gölü ve tarihi kalenin hemen yanındaki vadi içine kurulu stat." },
+  { name: "Rungrado 1 Mayıs Stadı", lat: 39.0494, lng: 125.7753, wiki: "Rungrado_1_Mayıs_Stadyumu", cat: "Klasik", desc: "114.000 kişilik kapasitesiyle dünyanın en büyük kapasiteli stadyumu; Manolya çiçeği formu." },
+  { name: "Narendra Modi Stadium", lat: 23.0917, lng: 72.5972, wiki: "Narendra_Modi_Stadyumu", cat: "Modern", desc: "132.000 kişilik kapasitesiyle dünyanın en büyük modern spor arenalarından biridir." },
+  { name: "Sultan İbrahim Stadyumu", lat: 1.4925, lng: 103.6150, wiki: "Sultan_Ibrahim_Stadium", cat: "Modern", desc: "Mücevher kutusu cephe tasarımı ve akıllı dinamik dış aydınlatma teknolojisi." },
+  { name: "NEOM Stadyumu", lat: 28.2520, lng: 34.7200, wiki: "Neom", cat: "Gelecek", desc: "2034 Dünya Kupası için 'The Line' şehri üzerinde, yerden 350 metre yükseklikte asılı duracak şekilde tasarlanan, tamamen yenilenebilir enerjiyle çalışan fütüristik 'Gökyüzü Stadyumu'." },
+
+  // --- YENİ EKLEMELER ---
+  { name: "RAMS Park", lat: 41.1033, lng: 28.9912, wiki: "Ali_Sami_Yen_Spor_Kompleksi", cat: "Modern", desc: "2011 yılında açılan, Türkiye'nin ilk C90 görüş açısına sahip ve çok amaçlı kullanıma uygun stadyumu. Vadi içine konumlandırılmış betonarme karkas üzerine çelik çatı yapısıyla inşa edilmiş, 131.76 desibel ile dünya ses rekorunun kırıldığı modern spor kompleksi." },
+  { name: "Cairo International Stadium", lat: 30.0626, lng: 31.2397, wiki: "Cairo_International_Stadium", cat: "Modern", desc: "Mısır'ın en büyük stadyumu; Afrika'nın önemli futbol merkezlerinden biri." },
+  { name: "Al Bayt Stadium", lat: 25.6520, lng: 51.4880, wiki: "Al_Bayt_Stadium", cat: "Modern", desc: "2022 FIFA Dünya Kupası için Katar'da inşa edilmiş, çadır formunda fütüristik stadyum." },
+  { name: "Ahmed bin Ali Stadium", lat: 25.2960, lng: 51.4467, wiki: "Ahmed_bin_Ali_Stadium", cat: "Modern", desc: "Katar'daki modern stadyumlardan biri; geleneksel mimari motiflerle çağdaş tasarımın birleşimi." },
+];
+
+    const map = L.map('map', { zoomControl: false }).setView([20, 10], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png').addTo(map);
+
+    const select = document.getElementById('stadiumSelect');
+    
+    dataSet.forEach(item => {
+        const m = L.marker([item.lat, item.lng], { 
+            icon: L.divIcon({ className: 'custom-marker' }) 
+        }).addTo(map);
+        
+        const opt = document.createElement('option');
+        opt.value = item.name; 
+        opt.textContent = `${item.cat} | ${item.name}`;
+        select.appendChild(opt);
+        
+        m.on('click', () => {
+            updatePanel(item);
+            map.flyTo([item.lat, item.lng], 13);
+        });
+    });
+
+    select.onchange = (e) => {
+        const item = dataSet.find(d => d.name === e.target.value);
+        if (item) { updatePanel(item); map.flyTo([item.lat, item.lng], 13); }
+    };
+
+    async function translateText(text) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`);
+            const data = await res.json();
+            return data[0].map(item => item[0]).join('');
+        } catch (error) {
+            return text;
+        }
+    }
+
+    function updatePanel(item) {
+        const titleEl = document.getElementById('stadium-title');
+        const styleBox = document.getElementById('style-box');
+        const styleName = document.getElementById('style-name');
+        const textEl = document.getElementById('stadium-text');
+        const imgEl = document.getElementById('stadium-img');
+        const linkEl = document.getElementById('wiki-link');
+
+        titleEl.textContent = item.name;
+        styleBox.style.display = 'inline-flex';
+        styleName.textContent = item.cat;
+        textEl.innerHTML = `<strong>Mimari Analiz:</strong> ${item.desc}<br><br><span id="summary">Bilgiler yükleniyor...</span>`;
+        
+        imgEl.style.display = 'none';
+        imgEl.src = '';
+
+        fetch(`https://tr.wikipedia.org/api/rest_v1/page/summary/${item.wiki}`)
+            .then(res => {
+                if (!res.ok) throw new Error();
+                return res.json();
+            })
+            .then(data => displayWikiData(data, false))
+            .catch(() => {
+                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${item.wiki}`)
+                    .then(res => res.json())
+                    .then(async (data) => {
+                        if (data.extract) {
+                            const translated = await translateText(data.extract);
+                            data.extract = translated;
+                            displayWikiData(data, true);
+                        } else {
+                            document.getElementById('summary').textContent = "Bilgi bulunamadı.";
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('summary').textContent = "Bilgi kaynağına ulaşılamadı.";
+                    });
+            });
+
+        function displayWikiData(data, isTranslated) {
+            const summaryEl = document.getElementById('summary');
+            const infoTag = isTranslated ? '<span class="translation-info">İngilizce üzerinden otomatik çevrildi</span>' : '';
+            
+            summaryEl.innerHTML = infoTag + (data.extract || "Özet bulunamadı.");
+
+            if (data.thumbnail) {
+                imgEl.src = data.thumbnail.source;
+                imgEl.style.display = 'block';
+            }
+            
+            if (data.content_urls) {
+                linkEl.href = data.content_urls.desktop.page;
+                linkEl.style.display = 'block';
+                linkEl.textContent = isTranslated ? "İNGİLİZCE KAYNAĞI GÖR" : "MİMARİ DETAYLARI İNCELE";
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
+    
+  </body>
+  
+</html>
