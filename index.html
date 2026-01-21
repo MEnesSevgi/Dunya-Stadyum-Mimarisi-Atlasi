@@ -221,7 +221,7 @@ const dataSet = [
   { name: "Ahmed bin Ali Stadium", lat: 25.2960, lng: 51.4467, wiki: "Ahmed_bin_Ali_Stadium", cat: "Modern", desc: "Katar'daki modern stadyumlardan biri; geleneksel mimari motiflerle çağdaş tasarımın birleşimi." },
 ];
 
-    const map = L.map('map', { zoomControl: false }).setView([20, 10], 2);
+    const map = L.map('map', { zoomControl: true }).setView([20, 10], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png').addTo(map);
 
     const select = document.getElementById('stadiumSelect');
